@@ -39,7 +39,11 @@ void redistributeFromLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, B
 void redistributeFromRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
 void mergeWithLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex);
 void mergeWithRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
-
+void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key);
+void repairAfterDelete(BPlusTree* tree, BPlusNode* node);
+void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex);
+void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex);
+void mergeWithSibling(BPlusTree* tree, BPlusNode* left, BPlusNode* right, int parentIndex);
 
 
 //teste

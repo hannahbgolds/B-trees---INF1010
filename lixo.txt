@@ -1,0 +1,232 @@
+// Exclusão de uma chave da árvore
+void deleteKey(BPlusTree* tree, int key) {
+    // Buscar a folha contendo a chave
+    BPlusNode* leaf = searchKey(tree, key);
+    if (!leaf) {
+        printf("Chave %d não encontrada.\n", key);
+        return;
+    }
+
+    // Remover a chave da folha
+    int i = 0;
+    while (i < leaf->numKeys && leaf->keys[i] != key) i++;
+    for (int j = i; j < leaf->numKeys - 1; j++) {
+        leaf->keys[j] = leaf->keys[j + 1];
+    }
+    leaf->numKeys--;
+
+    printf("Chave %d removida. Nó com %d chaves restantes: ", key, leaf->numKeys);
+    for (int j = 0; j < leaf->numKeys; j++) {
+        printf("%d ", leaf->keys[j]);
+    }
+    printf("\n");
+
+    // Verificar underflow na folha
+    if (leaf->numKeys < (tree->order + 1) / 2) {
+        handleUnderflow(tree, leaf);
+    }
+}
+
+void handleUnderflow(BPlusTree* tree, BPlusNode* node) {
+    if (node->parent == NULL) {
+        if (node->numKeys == 0 && !node->isLeaf) {
+            printf("Raiz vazia após underflow. Reorganizando para o filho.\n");
+            BPlusNode* newRoot = node->children[0];
+            if (newRoot) {
+                newRoot->parent = NULL;
+            }
+            tree->root = newRoot;
+            free(node);
+        }
+        return;
+    }
+
+    BPlusNode* parent = node->parent;
+    int nodeIndex = 0;
+
+    while (nodeIndex <= parent->numKeys && parent->children[nodeIndex] != node) {
+        nodeIndex++;
+    }
+
+    printf("Underflow detectado no nó com pai: %p\n", (void*)parent);
+
+    BPlusNode* leftSibling = (nodeIndex > 0) ? parent->children[nodeIndex - 1] : NULL;
+    BPlusNode* rightSibling = (nodeIndex < parent->numKeys) ? parent->children[nodeIndex + 1] : NULL;
+
+    // Redistribuição ou Mesclagem
+    if (leftSibling && leftSibling->numKeys > (tree->order - 1) / 2) {
+        printf("Redistribuindo do irmão esquerdo.\n");
+        redistributeFromLeft(tree, parent, node, leftSibling, nodeIndex);
+    } else if (rightSibling && rightSibling->numKeys > (tree->order - 1) / 2) {
+        printf("Redistribuindo do irmão direito.\n");
+        redistributeFromRight(tree, parent, node, rightSibling, nodeIndex);
+    } else if (leftSibling) {
+        printf("Mesclando nó com irmão esquerdo.\n");
+        mergeWithLeft(tree, parent, node, leftSibling, nodeIndex);
+    } else if (rightSibling) {
+        printf("Mesclando nó com irmão direito.\n");
+        mergeWithRight(tree, parent, node, rightSibling, nodeIndex);
+    }
+
+    // Verificar se o pai deve ser reorganizado
+    if (parent->numKeys == 0) {
+        if (parent == tree->root) {
+            printf("Reorganizando a raiz após mesclagem.\n");
+            tree->root = parent->children[0];
+            if (tree->root) {
+                tree->root->parent = NULL;
+            }
+            free(parent);
+        } else {
+            printf("Propagando underflow para o pai.\n");
+            handleUnderflow(tree, parent);
+        }
+    }
+}
+
+
+
+void mergeWithLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex) {
+    printf("Mesclando nó com irmão esquerdo.\n");
+
+    // Adicionar chave do pai ao irmão esquerdo
+    leftSibling->keys[leftSibling->numKeys] = parent->keys[nodeIndex - 1];
+    leftSibling->numKeys++;
+
+    // Transferir chaves do nó para o irmão esquerdo
+    for (int i = 0; i < node->numKeys; i++) {
+        leftSibling->keys[leftSibling->numKeys] = node->keys[i];
+        leftSibling->numKeys++;
+    }
+
+    // Transferir filhos se não for folha
+    if (!node->isLeaf) {
+        for (int i = 0; i <= node->numKeys; i++) {
+            leftSibling->children[leftSibling->numKeys + i] = node->children[i];
+            if (node->children[i]) {
+                node->children[i]->parent = leftSibling;
+            }
+        }
+    } else {
+        leftSibling->next = node->next;
+        if (node->next) {
+            node->next->prev = leftSibling;
+        }
+    }
+
+    // Atualizar pai
+    for (int i = nodeIndex - 1; i < parent->numKeys - 1; i++) {
+        parent->keys[i] = parent->keys[i + 1];
+        parent->children[i + 1] = parent->children[i + 2];
+    }
+    parent->numKeys--;
+
+    free(node);
+}
+
+void mergeWithRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex) {
+    printf("Mesclando nó com irmão direito.\n");
+
+    // Adicionar chave do pai ao nó
+    node->keys[node->numKeys] = parent->keys[nodeIndex];
+    node->numKeys++;
+
+    // Transferir chaves do irmão direito para o nó
+    for (int i = 0; i < rightSibling->numKeys; i++) {
+        node->keys[node->numKeys] = rightSibling->keys[i];
+        node->numKeys++;
+    }
+
+    // Transferir filhos se não for folha
+    if (!node->isLeaf) {
+        for (int i = 0; i <= rightSibling->numKeys; i++) {
+            node->children[node->numKeys + i] = rightSibling->children[i];
+            if (rightSibling->children[i]) {
+                rightSibling->children[i]->parent = node;
+            }
+        }
+    } else {
+        node->next = rightSibling->next;
+        if (rightSibling->next) {
+            rightSibling->next->prev = node;
+        }
+    }
+
+    // Atualizar pai
+    for (int i = nodeIndex; i < parent->numKeys - 1; i++) {
+        parent->keys[i] = parent->keys[i + 1];
+        parent->children[i + 1] = parent->children[i + 2];
+    }
+    parent->numKeys--;
+
+    free(rightSibling);
+}
+
+// Função para redistribuir do irmão esquerdo
+void redistributeFromLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex) {
+    printf("Redistribuindo do irmão esquerdo: Nó atual tem %d chaves, irmão esquerdo tem %d chaves.\n", node->numKeys, leftSibling->numKeys);
+
+    // Adicionar a chave do pai ao início do nó atual
+    for (int i = node->numKeys; i > 0; i--) {
+        node->keys[i] = node->keys[i - 1];
+    }
+    node->keys[0] = parent->keys[nodeIndex - 1];
+
+    // Atualizar o pai com a nova chave do irmão esquerdo
+    parent->keys[nodeIndex - 1] = leftSibling->keys[leftSibling->numKeys - 1];
+    leftSibling->numKeys--;
+    node->numKeys++;
+
+    // Redistribuir filhos se não for folha
+    if (!node->isLeaf) {
+        for (int i = node->numKeys; i > 0; i--) {
+            node->children[i] = node->children[i - 1];
+        }
+        node->children[0] = leftSibling->children[leftSibling->numKeys + 1];
+        if (node->children[0]) {
+            node->children[0]->parent = node;
+        }
+    }
+
+    printf("Redistribuição do irmão esquerdo concluída: Nó atual tem %d chaves, irmão esquerdo tem %d chaves restantes.\n", node->numKeys, leftSibling->numKeys);
+}
+
+
+// Função para redistribuir do irmão direito
+void redistributeFromRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex) {
+    printf("Redistribuindo do irmão direito: Nó atual tem %d chaves, irmão direito tem %d chaves.\n", node->numKeys, rightSibling->numKeys);
+
+    // Adicionar a chave do pai ao nó atual
+    node->keys[node->numKeys] = parent->keys[nodeIndex];
+    node->numKeys++;
+
+    // Atualizar o pai com a primeira chave do irmão direito
+    parent->keys[nodeIndex] = rightSibling->keys[0];
+
+    // Remover a chave promovida do irmão direito
+    for (int i = 0; i < rightSibling->numKeys - 1; i++) {
+        rightSibling->keys[i] = rightSibling->keys[i + 1];
+    }
+    rightSibling->numKeys--;
+
+    // Ajustar filhos, se o nó não for folha
+    if (!node->isLeaf) {
+        // Mover o primeiro filho do irmão direito para o nó atual
+        node->children[node->numKeys] = rightSibling->children[0];
+
+        // Ajustar os filhos do irmão direito
+        for (int i = 0; i < rightSibling->numKeys + 1; i++) {
+            rightSibling->children[i] = rightSibling->children[i + 1];
+        }
+
+        // Atualizar o pai do filho movido
+        if (node->children[node->numKeys]) {
+            node->children[node->numKeys]->parent = node;
+        }
+    }
+}
+
+
+
+
+

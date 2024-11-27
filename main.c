@@ -10,8 +10,8 @@ int main() {
     // insertKey(tree, 20);
     insertKey(tree, 5);
     insertKey(tree, 25);
-    // insertKey(tree, 30);
-    // insertKey(tree, 35);
+    insertKey(tree, 30);
+    insertKey(tree, 35);
    
 
     // Imprimir a árvore após inserções
@@ -19,50 +19,50 @@ int main() {
     printTree(tree);
 
     // Teste
-    printLeafNodes(tree);
+    // printLeafNodes(tree);
 
     // Buscar chaves
-    printf("\nBuscando chaves 10, 25, 40:\n");
-    BPlusNode* result;
+    // printf("\nBuscando chaves 10, 25, 40:\n");
+    // BPlusNode* result;
 
-    result = searchKey(tree, 10);
-    if (result) {
-        printf("Chave 10 encontrada no nó com chaves: ");
-        for (int i = 0; i < result->numKeys; i++) {
-            printf("%d ", result->keys[i]);
-        }
-        printf("\n");
-    } else {
-        printf("Chave 10 não encontrada.\n");
-    }
+    // result = searchKey(tree, 10);
+    // if (result) {
+    //     printf("Chave 10 encontrada no nó com chaves: ");
+    //     for (int i = 0; i < result->numKeys; i++) {
+    //         printf("%d ", result->keys[i]);
+    //     }
+    //     printf("\n");
+    // } else {
+    //     printf("Chave 10 não encontrada.\n");
+    // }
 
-    result = searchKey(tree, 25);
-    if (result) {
-        printf("Chave 25 encontrada no nó com chaves: ");
-        for (int i = 0; i < result->numKeys; i++) {
-            printf("%d ", result->keys[i]);
-        }
-        printf("\n");
-    } else {
-        printf("Chave 25 não encontrada.\n");
-    }
+    // result = searchKey(tree, 25);
+    // if (result) {
+    //     printf("Chave 25 encontrada no nó com chaves: ");
+    //     for (int i = 0; i < result->numKeys; i++) {
+    //         printf("%d ", result->keys[i]);
+    //     }
+    //     printf("\n");
+    // } else {
+    //     printf("Chave 25 não encontrada.\n");
+    // }
 
-    result = searchKey(tree, 40);
-    if (result) {
-        printf("Chave 40 encontrada no nó com chaves: ");
-        for (int i = 0; i < result->numKeys; i++) {
-            printf("%d ", result->keys[i]);
-        }
-        printf("\n");
-    } else {
-        printf("Chave 40 não encontrada.\n");
-    }
+    // result = searchKey(tree, 40);
+    // if (result) {
+    //     printf("Chave 40 encontrada no nó com chaves: ");
+    //     for (int i = 0; i < result->numKeys; i++) {
+    //         printf("%d ", result->keys[i]);
+    //     }
+    //     printf("\n");
+    // } else {
+    //     printf("Chave 40 não encontrada.\n");
+    // }
 
     // Remover chaves
-    // printf("\nRemovendo chave: 30\n");
-    // deleteKey(tree, 5);
-    // printf("\nÁrvore após exclusão do 30:\n");
-    // printTree(tree);
+    printf("\nRemovendo chave: 5\n");
+    deleteKey(tree, 5);
+    printf("\nÁrvore após exclusão do 5:\n");
+    printTree(tree);
 
     // printf("\nRemovendo chave: 5\n");
     // deleteKey(tree, 5);

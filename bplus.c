@@ -2,6 +2,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+void debugTree(BPlusNode* node, int level) {
+    if (!node) return;
+
+    printf("Level %d: [", level);
+    for (int i = 0; i < node->numKeys; i++) {
+        printf("%d ", node->keys[i]);
+    }
+    printf("]\n");
+
+    if (!node->isLeaf) {
+        for (int i = 0; i <= node->numKeys; i++) {
+            debugTree(node->children[i], level + 1);
+        }
+    }
+}
+
+void validateRelationships(BPlusNode* node) {
+    if (!node) return;
+
+    for (int i = 0; i <= node->numKeys; i++) {
+        if (node->children[i]) {
+            if (node->children[i]->parent != node) {
+                printf("Error: Parent-child relationship is inconsistent.\n");
+                printf("Node keys: ");
+                for (int j = 0; j < node->numKeys; j++) {
+                    printf("%d ", node->keys[j]);
+                }
+                printf("\n");
+
+                printf("Child keys: ");
+                for (int j = 0; j < node->children[i]->numKeys; j++) {
+                    printf("%d ", node->children[i]->keys[j]);
+                }
+                printf("\n");
+            }
+            validateRelationships(node->children[i]);
+        }
+    }
+}
+
+
+// SETUP
+/////////////////////////////////////////////////////////////////
 // Criação de um novo nó
 BPlusNode* createNode(int isLeaf) {
     BPlusNode* node = (BPlusNode*)malloc(sizeof(BPlusNode));
@@ -30,7 +74,12 @@ BPlusTree* createTree(int order) {
     tree->root = createNode(1); // Raiz começa como folha
     return tree;
 }
+///////////////////////////////////////////////////////////////
 
+
+
+//INSERÇÃO
+////////////////////////////////////////////////////////////////
 // Inserção de uma chave na árvore
 void insertKey(BPlusTree* tree, int key) {
     BPlusNode* current = tree->root;
@@ -68,14 +117,14 @@ void insertKey(BPlusTree* tree, int key) {
 void splitLeaf(BPlusTree* tree, BPlusNode* leaf) {
     int medianIndex = leaf->numKeys / 2;
 
-    printf("Before split, leaf keys: ");
-    for (int i = 0; i < leaf->numKeys; i++) printf("%d ", leaf->keys[i]);
-    printf("\n");
+    
+    // for (int i = 0; i < leaf->numKeys; i++) printf("%d ", leaf->keys[i]);
+    // printf("\n");
 
     // Create a new leaf
     BPlusNode* newLeaf = createNode(1);
     if (!newLeaf) {
-        printf("Error: Memory allocation failed for new leaf.\n");
+        printf("Falha na alocação de memória.\n");
         return;
     }
 
@@ -86,19 +135,19 @@ void splitLeaf(BPlusTree* tree, BPlusNode* leaf) {
         if (medianIndex + i < tree->order) {
             newLeaf->keys[i] = leaf->keys[medianIndex + i];
         } else {
-            printf("Error: Median index exceeds bounds during split.\n");
+            printf("Erro.\n");
             return;
         }
     }
     leaf->numKeys = medianIndex;
 
-    printf("After split, original leaf keys: ");
-    for (int i = 0; i < leaf->numKeys; i++) printf("%d ", leaf->keys[i]);
-    printf("\n");
+    // printf("After split, original leaf keys: ");
+    // for (int i = 0; i < leaf->numKeys; i++) printf("%d ", leaf->keys[i]);
+    // printf("\n");
 
-    printf("New leaf created with keys: ");
-    for (int i = 0; i < newLeaf->numKeys; i++) printf("%d ", newLeaf->keys[i]);
-    printf("\n");
+    // printf("New leaf created with keys: ");
+    // for (int i = 0; i < newLeaf->numKeys; i++) printf("%d ", newLeaf->keys[i]);
+    // printf("\n");
 
     // Adjust linked list pointers
     newLeaf->next = leaf->next;
@@ -119,7 +168,7 @@ void splitLeaf(BPlusTree* tree, BPlusNode* leaf) {
         // Create a new root if the leaf has no parent
         BPlusNode* newRoot = createNode(0);
         if (!newRoot) {
-            printf("Error: Memory allocation failed for new root.\n");
+            printf("Erro: Falha de alocação de memória para nova raiz\n");
             return;
         }
 
@@ -132,14 +181,12 @@ void splitLeaf(BPlusTree* tree, BPlusNode* leaf) {
         newLeaf->parent = newRoot;
         tree->root = newRoot;
 
-        printf("New root created with promoted key: %d\n", promotedKey);
+        // printf("New root created with promoted key: %d\n", promotedKey);
     } else {
-        printf("Promoting key %d to parent node.\n", promotedKey);
+        // printf("Promoting key %d to parent node.\n", promotedKey);
         insertInternal(tree, leaf->parent, promotedKey, newLeaf);
     }
 }
-
-
 
 // Inserção em um nó interno
 void insertInternal(BPlusTree* tree, BPlusNode* parent, int key, BPlusNode* rightChild) {
@@ -164,16 +211,14 @@ void insertInternal(BPlusTree* tree, BPlusNode* parent, int key, BPlusNode* righ
     }
 }
 
-
-
 // Divisão de um nó interno
 void splitInternal(BPlusTree* tree, BPlusNode* node) {
     int medianIndex = node->numKeys / 2;
     int promotedKey = node->keys[medianIndex];
 
-    printf("Dividindo nó interno com chaves: ");
-    for (int i = 0; i < node->numKeys; i++) printf("%d ", node->keys[i]);
-    printf("\n");
+    // printf("Dividindo nó interno com chaves: ");
+    // for (int i = 0; i < node->numKeys; i++) printf("%d ", node->keys[i]);
+    // printf("\n");
 
     BPlusNode* newInternal = createNode(0);
     newInternal->numKeys = node->numKeys - medianIndex - 1;
@@ -205,13 +250,34 @@ void splitInternal(BPlusTree* tree, BPlusNode* node) {
         newInternal->parent = newRoot;
         tree->root = newRoot;
 
-        printf("Nova raiz criada com chave promovida: %d\n", promotedKey);
+        // printf("Nova raiz criada com chave promovida: %d\n", promotedKey);
     } else {
         // Promover a chave para o nó pai
         insertInternal(tree, node->parent, promotedKey, newInternal);
     }
 }
+//////////////////////////////////////////////////////////////////////////////////////
 
+
+//FUNÇÃO AUXILIAR PARA PRINTAR OS NÓS (APENAS PARA VISUALIZAÇÃO)
+///////////////////////////////////////////////////////////////////////////////////////
+void printLeafNodes(BPlusTree* tree) {
+    BPlusNode* current = tree->root;
+    while (!current->isLeaf) current = current->children[0];
+
+    printf("Folhas encadeadas: ");
+    while (current) {
+        for (int i = 0; i < current->numKeys; i++) printf("%d ", current->keys[i]);
+        printf("-> ");
+        current = current->next;
+    }
+    printf("NULL\n");
+}
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+//BUSCA
+//////////////////////////////////////////////////////////////////////////////////////
 // Busca de uma chave na árvore
 BPlusNode* searchKey(BPlusTree* tree, int key) {
     BPlusNode* current = tree->root;
@@ -262,252 +328,325 @@ void printNode(BPlusNode* node, int level) {
         }
     }
 }
+//////////////////////////////////////////////////////////////////
 
 
-// Exclusão de uma chave da árvore
+
+//EXCLUSÃO
+
+// int deleteKey (BPlusTree*tree, int key){
+    //se eu retirar um dado que está só na folha: 
+        //checar se a folha tem underflow (menos de m/2 chaves ocupando a folha após a remoção): 
+            //se não tiver: 
+                //só remove
+            //se tiver: 
+                //verificar se o número de chaves ocupando aquela folha + o número de chaves do seu irmão a direita|esquerda é menor que m:
+                    // se um deles for: 
+                        //concatena (se for para a direita: vai ficar as chaves da folha adjacente + a maior chave do pai + as chaves do defasado E
+                        //a maior chave do pai, sai do pai)
+            
+    //if isLeaf = 1 (ta na folha), 
+// }
+
+// int mergeWithRight()
+
 void deleteKey(BPlusTree* tree, int key) {
-    // Buscar a folha contendo a chave
-    BPlusNode* leaf = searchKey(tree, key);
-    if (!leaf) {
-        printf("Chave %d não encontrada.\n", key);
+    if (tree->root == NULL) {
+        printf("Error: Cannot delete from an empty tree.\n");
         return;
     }
 
-    // Remover a chave da folha
-    int i = 0;
-    while (i < leaf->numKeys && leaf->keys[i] != key) i++;
-    for (int j = i; j < leaf->numKeys - 1; j++) {
-        leaf->keys[j] = leaf->keys[j + 1];
-    }
-    leaf->numKeys--;
+    BPlusNode* leaf = searchKey(tree, key);
 
-    printf("Chave %d removida. Nó com %d chaves restantes: ", key, leaf->numKeys);
-    for (int j = 0; j < leaf->numKeys; j++) {
-        printf("%d ", leaf->keys[j]);
+    if (leaf == NULL) {
+        printf("Error: Key %d not found in the tree.\n", key);
+        return;
     }
-    printf("\n");
 
-    // Verificar underflow na folha
-    if (leaf->numKeys < (tree->order + 1) / 2) {
-        handleUnderflow(tree, leaf);
+    printf("Deleting key %d...\n", key);
+
+    // Call helper function to delete the key
+    deleteFromNode(tree, leaf, key);
+
+    // Check if root needs adjustment
+    if (tree->root->numKeys == 0) {
+        if (!tree->root->isLeaf) {
+            // If the root is empty but has children, promote the first child as the new root
+            BPlusNode* newRoot = tree->root->children[0];
+            newRoot->parent = NULL;
+            free(tree->root);
+            tree->root = newRoot;
+        } else {
+            // If the root is a leaf and becomes empty, set the tree as empty
+            free(tree->root);
+            tree->root = NULL;
+        }
     }
 }
 
-void handleUnderflow(BPlusTree* tree, BPlusNode* node) {
-    if (node->parent == NULL) {
-        if (node->numKeys == 0 && !node->isLeaf) {
-            printf("Raiz vazia após underflow. Reorganizando para o filho.\n");
-            BPlusNode* newRoot = node->children[0];
-            if (newRoot) {
-                newRoot->parent = NULL;
-            }
-            tree->root = newRoot;
-            free(node);
+void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key) {
+    int i = 0;
+
+    // Locate the key to delete
+    while (i < node->numKeys && node->keys[i] != key) i++;
+
+    if (i == node->numKeys) {
+        printf("Error: Key %d not found in the node.\n", key);
+        return;
+    }
+
+    // Shift keys to remove the deleted key
+    for (int j = i; j < node->numKeys - 1; j++) {
+        node->keys[j] = node->keys[j + 1];
+    }
+    node->numKeys--;
+
+    if (node->isLeaf) {
+        // If it's a leaf node, check for underflow
+        if (node->numKeys < (tree->order - 1) / 2) {
+            repairAfterDelete(tree, node);
         }
+    } else {
+        // Internal node: Replace with in-order successor
+        BPlusNode* successor = node->children[i + 1];
+        while (!successor->isLeaf) {
+            successor = successor->children[0];
+        }
+        node->keys[i] = successor->keys[0];
+        deleteFromNode(tree, successor, successor->keys[0]);
+    }
+}
+
+void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
+    if (node->parent == NULL) {
+        // If the node is the root, no further repair needed
+        printf("Node is root, no repair needed.\n");
+
+        // If the root has no keys and a single child, promote the child to root
+        if (tree->root->numKeys == 0 && !tree->root->isLeaf) {
+            printf("Root has no keys. Promoting its only child as the new root.\n");
+            BPlusNode* newRoot = tree->root->children[0];
+            tree->root = newRoot;
+            tree->root->parent = NULL;
+        }
+
         return;
     }
 
     BPlusNode* parent = node->parent;
-    int nodeIndex = 0;
+    int parentIndex = 0;
 
-    while (nodeIndex <= parent->numKeys && parent->children[nodeIndex] != node) {
-        nodeIndex++;
+    // Find the index of the node in its parent's children array
+    while (parentIndex <= parent->numKeys && parent->children[parentIndex] != node) {
+        parentIndex++;
     }
 
-    printf("Underflow detectado no nó com pai: %p\n", (void*)parent);
-
-    BPlusNode* leftSibling = (nodeIndex > 0) ? parent->children[nodeIndex - 1] : NULL;
-    BPlusNode* rightSibling = (nodeIndex < parent->numKeys) ? parent->children[nodeIndex + 1] : NULL;
-
-    // Redistribuição ou Mesclagem
-    if (leftSibling && leftSibling->numKeys > (tree->order - 1) / 2) {
-        printf("Redistribuindo do irmão esquerdo.\n");
-        redistributeFromLeft(tree, parent, node, leftSibling, nodeIndex);
-    } else if (rightSibling && rightSibling->numKeys > (tree->order - 1) / 2) {
-        printf("Redistribuindo do irmão direito.\n");
-        redistributeFromRight(tree, parent, node, rightSibling, nodeIndex);
-    } else if (leftSibling) {
-        printf("Mesclando nó com irmão esquerdo.\n");
-        mergeWithLeft(tree, parent, node, leftSibling, nodeIndex);
-    } else if (rightSibling) {
-        printf("Mesclando nó com irmão direito.\n");
-        mergeWithRight(tree, parent, node, rightSibling, nodeIndex);
+    if (parentIndex > parent->numKeys) {
+        printf("Error: Node not found in parent's children.\n");
+        return;
     }
 
-    // Verificar se o pai deve ser reorganizado
+    printf("Parent keys before repair: ");
+    for (int i = 0; i < parent->numKeys; i++) {
+        printf("%d ", parent->keys[i]);
+    }
+    printf("\n");
+
+    // Check if we can borrow or need to merge
+    if (parentIndex > 0 && parent->children[parentIndex - 1]->numKeys > (tree->order - 1) / 2) {
+        printf("Stealing from left sibling.\n");
+        stealFromLeft(tree, node, parentIndex);
+    } else if (parentIndex < parent->numKeys && parent->children[parentIndex + 1]->numKeys > (tree->order - 1) / 2) {
+        printf("Stealing from right sibling.\n");
+        stealFromRight(tree, node, parentIndex);
+    } else if (parentIndex > 0) {
+        printf("Merging with left sibling.\n");
+        mergeWithSibling(tree, parent->children[parentIndex - 1], node, parentIndex - 1);
+    } else {
+        printf("Merging with right sibling.\n");
+        mergeWithSibling(tree, node, parent->children[parentIndex + 1], parentIndex);
+    }
+
+    // Handle empty parent
     if (parent->numKeys == 0) {
         if (parent == tree->root) {
-            printf("Reorganizando a raiz após mesclagem.\n");
-            tree->root = parent->children[0];
-            if (tree->root) {
+            printf("Parent is root and became empty. Promoting child as new root.\n");
+            // Promote the child to the root
+            if (parent->children[0]) {
+                tree->root = parent->children[0];
                 tree->root->parent = NULL;
             }
-            free(parent);
+            free(parent);  // Free the old parent node
         } else {
-            printf("Propagando underflow para o pai.\n");
-            handleUnderflow(tree, parent);
-        }
-    }
-}
+            printf("Parent became empty. Recursively repairing parent.\n");
 
-
-
-void mergeWithLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex) {
-    printf("Mesclando nó com irmão esquerdo.\n");
-
-    // Adicionar chave do pai ao irmão esquerdo
-    leftSibling->keys[leftSibling->numKeys] = parent->keys[nodeIndex - 1];
-    leftSibling->numKeys++;
-
-    // Transferir chaves do nó para o irmão esquerdo
-    for (int i = 0; i < node->numKeys; i++) {
-        leftSibling->keys[leftSibling->numKeys] = node->keys[i];
-        leftSibling->numKeys++;
-    }
-
-    // Transferir filhos se não for folha
-    if (!node->isLeaf) {
-        for (int i = 0; i <= node->numKeys; i++) {
-            leftSibling->children[leftSibling->numKeys + i] = node->children[i];
-            if (node->children[i]) {
-                node->children[i]->parent = leftSibling;
+            // Promote the valid child to the parent's position
+            for (int i = 0; i <= parent->numKeys; i++) {
+                if (parent->children[i]) {
+                    parent->children[i]->parent = parent->parent;
+                }
             }
+
+            BPlusNode* grandparent = parent->parent;
+
+            // Free parent and repair grandparent safely
+            free(parent);
+            repairAfterDelete(tree, grandparent);  // Recursively repair grandparent
         }
     } else {
-        leftSibling->next = node->next;
-        if (node->next) {
-            node->next->prev = leftSibling;
+        // Ensure parent keys reflect the current state of its children
+        if (parentIndex > 0 && parent->children[parentIndex - 1] != NULL) {
+            parent->keys[parentIndex - 1] = parent->children[parentIndex]->keys[0];
+        } else if (parentIndex < parent->numKeys && parent->children[parentIndex + 1] != NULL) {
+            parent->keys[parentIndex] = parent->children[parentIndex + 1]->keys[0];
         }
     }
 
-    // Atualizar pai
-    for (int i = nodeIndex - 1; i < parent->numKeys - 1; i++) {
-        parent->keys[i] = parent->keys[i + 1];
-        parent->children[i + 1] = parent->children[i + 2];
+    // After repairs, forcefully update the parent and its children
+    printf("Parent keys after repair: ");
+    for (int i = 0; i < parent->numKeys; i++) {
+        printf("%d ", parent->keys[i]);
     }
-    parent->numKeys--;
-
-    free(node);
-}
-
-void mergeWithRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex) {
-    printf("Mesclando nó com irmão direito.\n");
-
-    // Adicionar chave do pai ao nó
-    node->keys[node->numKeys] = parent->keys[nodeIndex];
-    node->numKeys++;
-
-    // Transferir chaves do irmão direito para o nó
-    for (int i = 0; i < rightSibling->numKeys; i++) {
-        node->keys[node->numKeys] = rightSibling->keys[i];
-        node->numKeys++;
-    }
-
-    // Transferir filhos se não for folha
-    if (!node->isLeaf) {
-        for (int i = 0; i <= rightSibling->numKeys; i++) {
-            node->children[node->numKeys + i] = rightSibling->children[i];
-            if (rightSibling->children[i]) {
-                rightSibling->children[i]->parent = node;
-            }
-        }
-    } else {
-        node->next = rightSibling->next;
-        if (rightSibling->next) {
-            rightSibling->next->prev = node;
-        }
-    }
-
-    // Atualizar pai
-    for (int i = nodeIndex; i < parent->numKeys - 1; i++) {
-        parent->keys[i] = parent->keys[i + 1];
-        parent->children[i + 1] = parent->children[i + 2];
-    }
-    parent->numKeys--;
-
-    free(rightSibling);
+    printf("\n");
 }
 
 
+void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex) {
+    BPlusNode* leftSibling = node->parent->children[parentIndex - 1];
 
-// Função para redistribuir do irmão esquerdo
-void redistributeFromLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex) {
-    printf("Redistribuindo do irmão esquerdo: Nó atual tem %d chaves, irmão esquerdo tem %d chaves.\n", node->numKeys, leftSibling->numKeys);
-
-    // Adicionar a chave do pai ao início do nó atual
+    // Shift keys in the current node to make space
     for (int i = node->numKeys; i > 0; i--) {
         node->keys[i] = node->keys[i - 1];
     }
-    node->keys[0] = parent->keys[nodeIndex - 1];
 
-    // Atualizar o pai com a nova chave do irmão esquerdo
-    parent->keys[nodeIndex - 1] = leftSibling->keys[leftSibling->numKeys - 1];
-    leftSibling->numKeys--;
-    node->numKeys++;
+    // Borrow the last key from the left sibling
+    node->keys[0] = node->parent->keys[parentIndex - 1];
+    node->parent->keys[parentIndex - 1] = leftSibling->keys[leftSibling->numKeys - 1];
 
-    // Redistribuir filhos se não for folha
     if (!node->isLeaf) {
-        for (int i = node->numKeys; i > 0; i--) {
+        // Shift children pointers in the current node
+        for (int i = node->numKeys + 1; i > 0; i--) {
             node->children[i] = node->children[i - 1];
         }
-        node->children[0] = leftSibling->children[leftSibling->numKeys + 1];
+
+        // Borrow the last child from the left sibling
+        node->children[0] = leftSibling->children[leftSibling->numKeys];
         if (node->children[0]) {
             node->children[0]->parent = node;
         }
     }
 
-    printf("Redistribuição do irmão esquerdo concluída: Nó atual tem %d chaves, irmão esquerdo tem %d chaves restantes.\n", node->numKeys, leftSibling->numKeys);
+    node->numKeys++;
+    leftSibling->numKeys--;
 }
 
+void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex) {
+    BPlusNode* rightSibling = node->parent->children[parentIndex + 1];
+    BPlusNode* parent = node->parent;
 
-// Função para redistribuir do irmão direito
-void redistributeFromRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex) {
-    printf("Redistribuindo do irmão direito: Nó atual tem %d chaves, irmão direito tem %d chaves.\n", node->numKeys, rightSibling->numKeys);
-
-    // Adicionar a chave do pai ao nó atual
-    node->keys[node->numKeys] = parent->keys[nodeIndex];
+    // Move parent's separating key into the current node
+    node->keys[node->numKeys] = parent->keys[parentIndex];
     node->numKeys++;
 
-    // Atualizar o pai com a primeira chave do irmão direito
-    parent->keys[nodeIndex] = rightSibling->keys[0];
+    // Update parent's separating key to the smallest key in the right sibling
+    parent->keys[parentIndex] = rightSibling->keys[0];
 
-    // Remover a chave promovida do irmão direito
+    // Shift keys in the right sibling
     for (int i = 0; i < rightSibling->numKeys - 1; i++) {
         rightSibling->keys[i] = rightSibling->keys[i + 1];
     }
-    rightSibling->numKeys--;
 
-    // Ajustar filhos, se o nó não for folha
+    // If nodes are not leaves, adjust child pointers
     if (!node->isLeaf) {
-        // Mover o primeiro filho do irmão direito para o nó atual
         node->children[node->numKeys] = rightSibling->children[0];
-
-        // Ajustar os filhos do irmão direito
-        for (int i = 0; i < rightSibling->numKeys + 1; i++) {
-            rightSibling->children[i] = rightSibling->children[i + 1];
-        }
-
-        // Atualizar o pai do filho movido
         if (node->children[node->numKeys]) {
             node->children[node->numKeys]->parent = node;
         }
+
+        for (int i = 0; i < rightSibling->numKeys; i++) {
+            rightSibling->children[i] = rightSibling->children[i + 1];
+        }
     }
+
+    // Decrease the key count in the right sibling
+    rightSibling->numKeys--;
 }
 
 
+void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode, int parentIndex) {
+    BPlusNode* parent = leftNode->parent;
 
-
-// Função para mesclar com o irmão esquerdo
-
-void printLeafNodes(BPlusTree* tree) {
-    BPlusNode* current = tree->root;
-    while (!current->isLeaf) current = current->children[0];
-
-    printf("Folhas encadeadas: ");
-    while (current) {
-        for (int i = 0; i < current->numKeys; i++) printf("%d ", current->keys[i]);
-        printf("-> ");
-        current = current->next;
+    printf("\n--- STARTING MERGE ---\n");
+    printf("Merging nodes with keys: ");
+    for (int i = 0; i < leftNode->numKeys; i++) {
+        printf("%d ", leftNode->keys[i]);
     }
-    printf("NULL\n");
+    printf("and ");
+    for (int i = 0; i < rightNode->numKeys; i++) {
+        printf("%d ", rightNode->keys[i]);
+    }
+    printf("\n");
+
+    // Always transfer the separating key from the parent to the left node
+    printf("Adding separating key %d from parent to left node\n", parent->keys[parentIndex]);
+    leftNode->keys[leftNode->numKeys++] = parent->keys[parentIndex];
+
+    // Transfer keys from the right node to the left node
+    for (int i = 0; i < rightNode->numKeys; i++) {
+        leftNode->keys[leftNode->numKeys++] = rightNode->keys[i];
+    }
+
+    // Transfer children from right node to left node if it's not a leaf
+    if (!leftNode->isLeaf) {
+        for (int i = 0; i <= rightNode->numKeys; i++) {
+            leftNode->children[leftNode->numKeys + i] = rightNode->children[i];
+            if (rightNode->children[i]) {
+                rightNode->children[i]->parent = leftNode;
+            }
+        }
+    }
+
+    // Now, remove duplicates from the left node (after merge)
+    for (int i = 0; i < leftNode->numKeys - 1; i++) {
+        if (leftNode->keys[i] == leftNode->keys[i + 1]) {
+            // Shift left the duplicate key
+            for (int j = i; j < leftNode->numKeys - 1; j++) {
+                leftNode->keys[j] = leftNode->keys[j + 1];
+            }
+            leftNode->numKeys--;  // Decrease the number of keys in the left node
+            i--; // Recheck the current index after shifting
+        }
+    }
+
+    // Shift keys and children in the parent node
+    for (int i = parentIndex; i < parent->numKeys - 1; i++) {
+        parent->keys[i] = parent->keys[i + 1];
+        parent->children[i + 1] = parent->children[i + 2];
+    }
+
+    // Clean up orphaned child reference
+    parent->children[parent->numKeys] = NULL;
+    parent->numKeys--;
+
+    // If the parent becomes empty, we need to check if we should update the root
+    if (parent->numKeys == 0 && parent == tree->root) {
+        printf("Parent became empty. Updating root...\n");
+        tree->root = leftNode;  // Make leftNode the new root
+        tree->root->parent = NULL;  // Root has no parent
+        free(parent);  // Free the old parent node
+    }
+
+    // Validate tree structure after merge
+    printf("Validating tree structure after merge...\n");
+    debugTree(tree->root, 0);
+
+    // Validate parent-child relationships after merge
+    printf("Validating parent-child relationships...\n");
+    for (int i = 0; i <= parent->numKeys; i++) {
+        if (parent->children[i] && parent->children[i]->parent != parent) {
+            printf("Error: Parent-child relationship is inconsistent.\n");
+        }
+    }
+
+    printf("--- END OF MERGE ---\n");
 }
