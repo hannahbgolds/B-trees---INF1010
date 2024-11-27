@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/pedronogueira/inf1010/Trabalho02/B-trees---INF1010/output'
+relocations:     []
+...

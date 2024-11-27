@@ -399,6 +399,7 @@ void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key) {
     for (int j = i; j < node->numKeys - 1; j++) {
         node->keys[j] = node->keys[j + 1];
     }
+    node->keys[node->numKeys - 1] = -1;
     node->numKeys--;
 
     if (node->isLeaf) {
@@ -437,11 +438,11 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
     int parentIndex = 0;
 
     // Find the index of the node in its parent's children array
-    while (parentIndex <= parent->numKeys && parent->children[parentIndex] != node) {
+    while (parentIndex < parent->numKeys && parent->children[parentIndex] != node) {
         parentIndex++;
     }
 
-    if (parentIndex > parent->numKeys) {
+    if (parentIndex == parent->numKeys) {
         printf("Error: Node not found in parent's children.\n");
         return;
     }
@@ -481,17 +482,17 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
             printf("Parent became empty. Recursively repairing parent.\n");
 
             // Promote the valid child to the parent's position
-            for (int i = 0; i <= parent->numKeys; i++) {
-                if (parent->children[i]) {
-                    parent->children[i]->parent = parent->parent;
-                }
-            }
+            // for (int i = 0; i <= parent->numKeys; i++) {
+            //     if (parent->children[i]) {
+            //         parent->children[i]->parent = parent->parent;
+            //     }
+            // }
 
-            BPlusNode* grandparent = parent->parent;
+            // BPlusNode* grandparent = parent->parent;
 
-            // Free parent and repair grandparent safely
-            free(parent);
-            repairAfterDelete(tree, grandparent);  // Recursively repair grandparent
+            // // Free parent and repair grandparent safely
+            // free(parent);
+            repairAfterDelete(tree, parent);  // Recursively repair grandparent
         }
     } else {
         // Ensure parent keys reflect the current state of its children
@@ -593,13 +594,14 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode
 
     // Transfer keys from the right node to the left node
     for (int i = 0; i < rightNode->numKeys; i++) {
-        leftNode->keys[leftNode->numKeys++] = rightNode->keys[i];
+        leftNode->keys[leftNode->numKeys + (i + 1)] = rightNode->keys[i];
     }
 
     // Transfer children from right node to left node if it's not a leaf
     if (!leftNode->isLeaf) {
+        printf("Cheguei na transf de children\n");
         for (int i = 0; i <= rightNode->numKeys; i++) {
-            leftNode->children[leftNode->numKeys + i] = rightNode->children[i];
+            leftNode->children[leftNode->numKeys++] = rightNode->children[i];
             if (rightNode->children[i]) {
                 rightNode->children[i]->parent = leftNode;
             }
