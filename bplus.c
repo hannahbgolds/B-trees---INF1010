@@ -296,27 +296,38 @@ void printLeafNodes(BPlusTree* tree) {
 //////////////////////////////////////////////////////////////////////////////////////
 // Busca de uma chave na árvore
 BPlusNode* searchKey(BPlusTree* tree, int key) {
+    if (tree == NULL || tree->root == NULL) {
+        return NULL; // Árvore ou raiz não existe
+    }
+
     BPlusNode* current = tree->root;
 
     while (current != NULL) {
         int i = 0;
 
+        // Procurar o índice apropriado no nó atual
         while (i < current->numKeys && key > current->keys[i]) {
             i++;
         }
 
-        if (i < current->numKeys && key == current->keys[i]) {
-            return current;
+        printf("%d\n", i);
+        if (!current->isLeaf) {
+            // Continuar descendo para o filho apropriado
+            if (current->keys[i] == key) {
+                current = current->children[i + 1];
+            } else {
+                current = current->children[i];
+            }
+        } else {
+            // Se for uma folha, verificar se a chave existe
+            if (i < current->numKeys && current->keys[i] == key) {
+                return current; // Chave encontrada
+            }
+            break; // Chave não encontrada
         }
-
-        if (current->isLeaf) {
-            break;
-        }
-
-        current = current->children[i];
     }
 
-    return NULL;
+    return NULL; // Chave não encontrada
 }
 
 // Impressão da árvore B+
@@ -334,7 +345,9 @@ void printNode(BPlusNode* node, int level) {
     for (int i = 0; i < node->numKeys; i++) {
         printf("%d ", node->keys[i]);
     }
-    printf("]\n");
+    printf("] - ");
+
+    printf("isLeaf: %s\n", node->isLeaf ? "true" : "false");
 
     if (!node->isLeaf) {
         for (int i = 0; i <= node->numKeys; i++) {
