@@ -280,27 +280,38 @@ void printLeafNodes(BPlusTree* tree) {
 //////////////////////////////////////////////////////////////////////////////////////
 // Busca de uma chave na árvore
 BPlusNode* searchKey(BPlusTree* tree, int key) {
+    if (tree == NULL || tree->root == NULL) {
+        return NULL; // Árvore ou raiz não existe
+    }
+
     BPlusNode* current = tree->root;
 
     while (current != NULL) {
         int i = 0;
 
+        // Procurar o índice apropriado no nó atual
         while (i < current->numKeys && key > current->keys[i]) {
             i++;
         }
 
-        if (i < current->numKeys && key == current->keys[i]) {
-            return current;
+        printf("%d\n", i);
+        if (!current->isLeaf) {
+            // Continuar descendo para o filho apropriado
+            if (current->keys[i] == key) {
+                current = current->children[i + 1];
+            } else {
+                current = current->children[i];
+            }
+        } else {
+            // Se for uma folha, verificar se a chave existe
+            if (i < current->numKeys && current->keys[i] == key) {
+                return current; // Chave encontrada
+            }
+            break; // Chave não encontrada
         }
-
-        if (current->isLeaf) {
-            break;
-        }
-
-        current = current->children[i];
     }
 
-    return NULL;
+    return NULL; // Chave não encontrada
 }
 
 // Impressão da árvore B+
@@ -318,7 +329,9 @@ void printNode(BPlusNode* node, int level) {
     for (int i = 0; i < node->numKeys; i++) {
         printf("%d ", node->keys[i]);
     }
-    printf("]\n");
+    printf("] - ");
+
+    printf("isLeaf: %s\n", node->isLeaf ? "true" : "false");
 
     if (!node->isLeaf) {
         for (int i = 0; i <= node->numKeys; i++) {
@@ -370,6 +383,7 @@ void deleteKey(BPlusTree* tree, int key) {
 
     // Check if root needs adjustment
     if (tree->root->numKeys == 0) {
+        printf("root precisa de ajuste\n");
         if (!tree->root->isLeaf) {
             // If the root is empty but has children, promote the first child as the new root
             BPlusNode* newRoot = tree->root->children[0];
@@ -403,8 +417,10 @@ void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key) {
     node->numKeys--;
 
     if (node->isLeaf) {
+        printf("é folha\n");
         // If it's a leaf node, check for underflow
         if (node->numKeys < (tree->order - 1) / 2) {
+            printf("teve underflow\n");
             repairAfterDelete(tree, node);
         }
     } else {
@@ -588,9 +604,10 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode
     }
     printf("\n");
 
-    // Always transfer the separating key from the parent to the left node
-    printf("Adding separating key %d from parent to left node\n", parent->keys[parentIndex]);
-    leftNode->keys[leftNode->numKeys++] = parent->keys[parentIndex];
+    if (!leftNode->isLeaf) {
+        printf("Adding separating key %d from parent to left node\n", parent->keys[parentIndex]);
+        leftNode->keys[leftNode->numKeys++] = parent->keys[parentIndex];
+    }
 
     // Transfer keys from the right node to the left node
     for (int i = 0; i < rightNode->numKeys; i++) {

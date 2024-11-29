@@ -64,10 +64,15 @@ int main() {
     printf("\nÁrvore após exclusão do 5:\n");
     printTree(tree);
 
-    // printf("\nRemovendo chave: 5\n");
-    // deleteKey(tree, 5);
-    // printf("\nÁrvore após exclusão do 5:\n");
-    // printTree(tree);
+    printf("\nRemovendo chave: 30\n");
+    deleteKey(tree, 30);
+    printf("\nÁrvore após exclusão do 30:\n");
+    printTree(tree);
+
+    printf("\nRemovendo chave: 15\n");
+    deleteKey(tree, 15);
+    printf("\nÁrvore após exclusão do 15:\n");
+    printTree(tree);
 
     return 0;
 }
