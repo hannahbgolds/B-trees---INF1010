@@ -4,7 +4,7 @@ int main() {
     BPlusTree* tree = createTree(3);
 
     // Inserir chaves
-    printf("Inserindo chaves: 15, 5, 25\n");
+    // printf("Inserindo chaves: 15, 5, 25\n");
     // insertKey(tree, 10);
     insertKey(tree, 15);
     // insertKey(tree, 20);
@@ -15,8 +15,8 @@ int main() {
    
 
     // Imprimir a árvore após inserções
-    printf("\nÁrvore após inserções:\n");
-    printTree(tree);
+    // printf("\nÁrvore após inserções:\n");
+    // printTree(tree);
 
     // Teste
     // printLeafNodes(tree);
@@ -59,15 +59,16 @@ int main() {
     // }
 
     // Remover chaves
-    printf("\nRemovendo chave: 5\n");
+    // printf("\nRemovendo chave: 5\n");
     deleteKey(tree, 5);
     printf("\nÁrvore após exclusão do 5:\n");
     printTree(tree);
+    printLeafNodes(tree);
 
-    // printf("\nRemovendo chave: 5\n");
-    // deleteKey(tree, 5);
-    // printf("\nÁrvore após exclusão do 5:\n");
-    // printTree(tree);
+    // printf("\nRemovendo chave: 30\n");
+    deleteKey(tree, 30);
+    printf("\nÁrvore após exclusão do 30:\n");
+    printTree(tree);
 
     return 0;
 }

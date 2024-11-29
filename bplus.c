@@ -2,6 +2,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Função para imprimir as chaves dos filhos de um nó
+void printChildrenKeys(BPlusNode* node) {
+    printf("Filhos do nó: ");
+    for (int i = 0; i <= node->numKeys; i++) {
+        if (node->children[i]) {
+            printf("[ ");
+            for (int j = 0; j < node->children[i]->numKeys; j++) {
+                printf("%d ", node->children[i]->keys[j]);
+            }
+            printf("] ");
+        } else {
+            printf("[NULL] ");
+        }
+    }
+    printf("\n");
+}
 
 void debugTree(BPlusNode* node, int level) {
     if (!node) return;
@@ -368,8 +384,11 @@ void deleteKey(BPlusTree* tree, int key) {
     // Call helper function to delete the key
     deleteFromNode(tree, leaf, key);
 
+    printf("passei aqui\n");
+
     // Check if root needs adjustment
     if (tree->root->numKeys == 0) {
+        printf("precisa de ajuste\n");
         if (!tree->root->isLeaf) {
             // If the root is empty but has children, promote the first child as the new root
             BPlusNode* newRoot = tree->root->children[0];
@@ -384,11 +403,30 @@ void deleteKey(BPlusTree* tree, int key) {
     }
 }
 
+
+
 void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key) {
+    printf("iniciando deleteFromNode\n");
+
     int i = 0;
+
+    printf("NODE KEYS: ");
+    for(int a = 0; a < node->numKeys; a++) {
+        printf("%d ", node->keys[a]);
+    }
+    printf("\n\n");
+
 
     // Locate the key to delete
     while (i < node->numKeys && node->keys[i] != key) i++;
+    
+    // printf("i: %d\n", i);
+    // if (i < node->numKeys) {
+    //     printf("Found key: %d\n", node->keys[i]);
+    // } else {
+    //     printf("Error: Key %d not found in the node.\n", key);
+    // }
+    // debugTree(tree->root, 0);
 
     if (i == node->numKeys) {
         printf("Error: Key %d not found in the node.\n", key);
@@ -399,36 +437,92 @@ void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key) {
     for (int j = i; j < node->numKeys - 1; j++) {
         node->keys[j] = node->keys[j + 1];
     }
-    node->keys[node->numKeys - 1] = -1;
+    // node->keys[node->numKeys - 1] = -1;
     node->numKeys--;
+    printf("After shifting keys, node keys: ");
+    for (int k = 0; k < node->numKeys; k++) {
+        printf("%d ", node->keys[k]);
+    }
+    printf("\n");
 
     if (node->isLeaf) {
+        printf("É folha\n");
         // If it's a leaf node, check for underflow
         if (node->numKeys < (tree->order - 1) / 2) {
+            printf("Teve underflow\n");
             repairAfterDelete(tree, node);
         }
     } else {
+        printf("Nó interno\n");
+        printLeafNodes(tree);
         // Internal node: Replace with in-order successor
         BPlusNode* successor = node->children[i + 1];
+        
+        while (!successor->isLeaf) {
+        successor = successor->children[0];  // Acha o nó mais à esquerda da subárvore
+        }
+
+        printf("Filho que vai substituir o 30 (sucessor): ");
+        for (int j = 0; j < successor->numKeys; j++) {
+            printf("%d ", successor->keys[j]);
+        }
+        printf("\n");
+
+        printChildrenKeys(successor);
+        
         while (!successor->isLeaf) {
             successor = successor->children[0];
         }
         node->keys[i] = successor->keys[0];
         deleteFromNode(tree, successor, successor->keys[0]);
+
+        // Now we need to ensure that the parent is updated correctly
+        // This ensures the parent gets the updated keys from this operation
+        if (node->parent) {
+            printf("Updating parent with the new value...\n");
+            node->parent->keys[i] = node->keys[i];  // Update the parent key to the new key
+        }
     }
+
+    printf("After deletion a , node keys: ");
+    for (int k = 0; k < node->numKeys; k++) {
+        printf("%d ", node->keys[k]);
+    }
+    printf("\n");
+
+    // If the node becomes empty after the deletion, handle this
+    if (node->numKeys == 0) {
+        printf("Node is empty, need to repair...\n");
+        repairAfterDelete(tree, node);  // Fix the tree after emptying the node
+    }
+
+    printf("finalizando deleteFromNode\n");
 }
+
+
 
 void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
     if (node->parent == NULL) {
-        // If the node is the root, no further repair needed
-        printf("Node is root, no repair needed.\n");
+        // printf("Node is root, checking if root needs update...\n");
 
-        // If the root has no keys and a single child, promote the child to root
-        if (tree->root->numKeys == 0 && !tree->root->isLeaf) {
-            printf("Root has no keys. Promoting its only child as the new root.\n");
-            BPlusNode* newRoot = tree->root->children[0];
-            tree->root = newRoot;
+        if (node->numKeys == 0 && !node->isLeaf && node->children[0]) {
+            // printf("Root is empty, promoting child.\n");
+            tree->root = node->children[0];
             tree->root->parent = NULL;
+
+            // Propagate the 35 to the new root
+            if (node->children[0] && node->children[0]->numKeys > 0) {
+                tree->root->keys[tree->root->numKeys++] = node->children[0]->keys[0];
+            }
+
+            // Debugging the new root
+            // printf("New root keys after promotion: ");
+            // for (int i = 0; i < tree->root->numKeys; i++) {
+            //     printf("%d ", tree->root->keys[i]);
+            // }
+            // printf("\n");
+
+            free(node);  // Free the old root node
         }
 
         return;
@@ -447,11 +541,11 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
         return;
     }
 
-    printf("Parent keys before repair: ");
-    for (int i = 0; i < parent->numKeys; i++) {
-        printf("%d ", parent->keys[i]);
-    }
-    printf("\n");
+    // printf("Parent keys before repair: ");
+    // for (int i = 0; i < parent->numKeys; i++) {
+    //     printf("%d ", parent->keys[i]);
+    // }
+    // printf("\n");
 
     // Check if we can borrow or need to merge
     if (parentIndex > 0 && parent->children[parentIndex - 1]->numKeys > (tree->order - 1) / 2) {
@@ -471,7 +565,7 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
     // Handle empty parent
     if (parent->numKeys == 0) {
         if (parent == tree->root) {
-            printf("Parent is root and became empty. Promoting child as new root.\n");
+            // printf("Parent is root and became empty. Promoting child as new root.\n");
             // Promote the child to the root
             if (parent->children[0]) {
                 tree->root = parent->children[0];
@@ -479,19 +573,8 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
             }
             free(parent);  // Free the old parent node
         } else {
-            printf("Parent became empty. Recursively repairing parent.\n");
+            // printf("Parent became empty. Recursively repairing parent.\n");
 
-            // Promote the valid child to the parent's position
-            // for (int i = 0; i <= parent->numKeys; i++) {
-            //     if (parent->children[i]) {
-            //         parent->children[i]->parent = parent->parent;
-            //     }
-            // }
-
-            // BPlusNode* grandparent = parent->parent;
-
-            // // Free parent and repair grandparent safely
-            // free(parent);
             repairAfterDelete(tree, parent);  // Recursively repair grandparent
         }
     } else {
@@ -504,15 +587,18 @@ void repairAfterDelete(BPlusTree* tree, BPlusNode* node) {
     }
 
     // After repairs, forcefully update the parent and its children
-    printf("Parent keys after repair: ");
-    for (int i = 0; i < parent->numKeys; i++) {
-        printf("%d ", parent->keys[i]);
-    }
-    printf("\n");
+    // printf("Parent keys after repair: ");
+    // for (int i = 0; i < parent->numKeys; i++) {
+    //     printf("%d ", parent->keys[i]);
+    // }
+    // printf("\n");
 }
 
 
 void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex) {
+    
+    printf("--- START OF STEAL FROM LEFT ---");
+
     BPlusNode* leftSibling = node->parent->children[parentIndex - 1];
 
     // Shift keys in the current node to make space
@@ -539,9 +625,14 @@ void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex) {
 
     node->numKeys++;
     leftSibling->numKeys--;
+
+      printf("--- END OF STEAL FROM LEFT ---");
 }
 
 void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex) {
+
+    printf("--- START OF STEAL FROM RIGHT ---");
+
     BPlusNode* rightSibling = node->parent->children[parentIndex + 1];
     BPlusNode* parent = node->parent;
 
@@ -571,25 +662,28 @@ void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex) {
 
     // Decrease the key count in the right sibling
     rightSibling->numKeys--;
+
+    printf("--- END OF STEAL FROM RIGHT ---");
 }
 
 
+/// ------------- THIS WORKS --------------- ///
 void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode, int parentIndex) {
     BPlusNode* parent = leftNode->parent;
 
     printf("\n--- STARTING MERGE ---\n");
-    printf("Merging nodes with keys: ");
-    for (int i = 0; i < leftNode->numKeys; i++) {
-        printf("%d ", leftNode->keys[i]);
-    }
-    printf("and ");
-    for (int i = 0; i < rightNode->numKeys; i++) {
-        printf("%d ", rightNode->keys[i]);
-    }
-    printf("\n");
+    // printf("Merging nodes with keys: ");
+    // for (int i = 0; i < leftNode->numKeys; i++) {
+    //     printf("%d ", leftNode->keys[i]);
+    // }
+    // printf("and ");
+    // for (int i = 0; i < rightNode->numKeys; i++) {
+    //     printf("%d ", rightNode->keys[i]);
+    // }
+    // printf("\n");
 
     // Always transfer the separating key from the parent to the left node
-    printf("Adding separating key %d from parent to left node\n", parent->keys[parentIndex]);
+    // printf("Adding separating key %d from parent to left node\n", parent->keys[parentIndex]);
     leftNode->keys[leftNode->numKeys++] = parent->keys[parentIndex];
 
     // Transfer keys from the right node to the left node
@@ -599,7 +693,7 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode
 
     // Transfer children from right node to left node if it's not a leaf
     if (!leftNode->isLeaf) {
-        printf("Cheguei na transf de children\n");
+        // printf("Cheguei na transf de children\n");
         for (int i = 0; i <= rightNode->numKeys; i++) {
             leftNode->children[leftNode->numKeys++] = rightNode->children[i];
             if (rightNode->children[i]) {
@@ -632,18 +726,18 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode
 
     // If the parent becomes empty, we need to check if we should update the root
     if (parent->numKeys == 0 && parent == tree->root) {
-        printf("Parent became empty. Updating root...\n");
+        // printf("Parent became empty. Updating root...\n");
         tree->root = leftNode;  // Make leftNode the new root
         tree->root->parent = NULL;  // Root has no parent
         free(parent);  // Free the old parent node
     }
 
     // Validate tree structure after merge
-    printf("Validating tree structure after merge...\n");
-    debugTree(tree->root, 0);
+    // printf("Validating tree structure after merge...\n");
+    // debugTree(tree->root, 0);
 
     // Validate parent-child relationships after merge
-    printf("Validating parent-child relationships...\n");
+    // printf("Validating parent-child relationships...\n");
     for (int i = 0; i <= parent->numKeys; i++) {
         if (parent->children[i] && parent->children[i]->parent != parent) {
             printf("Error: Parent-child relationship is inconsistent.\n");
@@ -652,3 +746,4 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* leftNode, BPlusNode* rightNode
 
     printf("--- END OF MERGE ---\n");
 }
+///////////////////////////////////////////////////////

@@ -49,4 +49,30 @@ void mergeWithSibling(BPlusTree* tree, BPlusNode* left, BPlusNode* right, int pa
 //teste
 void printLeafNodes(BPlusTree* tree);
 
+// Declarações das Funções
+
+// Encontra o nó e índice da chave na árvore
+BPlusNode* achaElemento(BPlusNode* noAtual, int* indice, int chave);
+
+// Verifica o caso específico da remoção
+int verificaCaso(BPlusNode* noAtual);
+
+// Remove uma chave do nó e ajusta a árvore, se necessário
+void remover(BPlusNode* noAtual, int chave);
+
+// Ajusta a árvore após a remoção para manter suas propriedades
+void arrumarArvore(BPlusNode* noAtual);
+
+// Empresta uma chave do irmão à esquerda
+void emprestaEsquerda(BPlusNode* noAtual);
+
+// Empresta uma chave do irmão à direita
+void emprestaDireita(BPlusNode* noAtual);
+
+// Realiza o merge com o irmão à esquerda
+void mergeEsquerda(BPlusNode* noAtual);
+
+// Realiza o merge com o irmão à direita
+void mergeDireita(BPlusNode* noAtual);
+
 #endif // BPLUS_H
