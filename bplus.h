@@ -7,9 +7,9 @@
 // Estrutura do nó da árvore B+
 typedef struct BPlusNode {
     int numKeys;                   // Número atual de chaves
-    int keys[3];                   // Vetor de chaves (máximo 2 chaves para ordem 3)
+    int keys[3];                   // Vetor de chaves (máximo 2 chaves para ordem 3 + 1 de overflow)
     struct BPlusNode* parent;      // Ponteiro para o nó pai
-    struct BPlusNode* children[4]; // Ponteiros para os filhos (máximo 3 filhos para ordem 3)
+    struct BPlusNode* children[3]; // Ponteiros para os filhos (máximo 3 filhos para ordem 3)
     struct BPlusNode* next;        // Ponteiro para o próximo nó folha (apenas para folhas)
     struct BPlusNode* prev;        // Ponteiro para o nó folha anterior (apenas para folhas)
     int isLeaf;                    // 1 se for folha, 0 caso contrário
@@ -22,31 +22,15 @@ typedef struct BPlusTree {
 } BPlusTree;
 
 // Funções principais
-BPlusTree* createTree(int order);
-void insertKey(BPlusTree* tree, int key);
-void deleteKey(BPlusTree* tree, int key);
-void printTree(BPlusTree* tree);
+BPlusNode* createNode();
+BPlusTree* createTree();
+BPlusNode* findLeaf(BPlusTree* tree, int key);
 
 // Funções auxiliares
-BPlusNode* createNode(int isLeaf);
-BPlusNode* searchKey(BPlusTree* tree, int key);
-void splitLeaf(BPlusTree* tree, BPlusNode* leaf);
-void splitInternal(BPlusTree* tree, BPlusNode* node);
-void insertInternal(BPlusTree* tree, BPlusNode* parent, int key, BPlusNode* rightChild);
-void handleUnderflow(BPlusTree* tree, BPlusNode* node);
-void printNode(BPlusNode* node, int level);
-void redistributeFromLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex);
-void redistributeFromRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
-void mergeWithLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex);
-void mergeWithRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
-void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key);
-void repairAfterDelete(BPlusTree* tree, BPlusNode* node);
-void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex);
-void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex);
-void mergeWithSibling(BPlusTree* tree, BPlusNode* left, BPlusNode* right, int parentIndex);
-
 
 //teste
-void printLeafNodes(BPlusTree* tree);
+void printNode(BPlusNode* node);
+void printNodeKeys(BPlusNode* node, int level);
+void printTree(BPlusNode* root, int level);
 
 #endif // BPLUS_H
