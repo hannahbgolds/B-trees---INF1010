@@ -4,12 +4,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ORDER 3 // Define a ordem da árvore B+
+
+/* 
+===========================================================
+                ESTRUTURAS DE DADOS
+===========================================================
+*/
+
 // Estrutura do nó da árvore B+
 typedef struct BPlusNode {
-    int numKeys;                   // Número atual de chaves
-    int keys[3];                   // Vetor de chaves (máximo 2 chaves para ordem 3)
+    int numKeys;                   // Número atual de chaves no nó
+    int keys[3];                   // Vetor de chaves (máximo ORDER - 1 chaves)
     struct BPlusNode* parent;      // Ponteiro para o nó pai
-    struct BPlusNode* children[4]; // Ponteiros para os filhos (máximo 3 filhos para ordem 3)
+    struct BPlusNode* children[4]; // Ponteiros para os filhos (máximo ORDER filhos)
     struct BPlusNode* next;        // Ponteiro para o próximo nó folha (apenas para folhas)
     struct BPlusNode* prev;        // Ponteiro para o nó folha anterior (apenas para folhas)
     int isLeaf;                    // 1 se for folha, 0 caso contrário
@@ -21,58 +29,89 @@ typedef struct BPlusTree {
     int order;                     // Ordem da árvore
 } BPlusTree;
 
-// Funções principais
+/* 
+===========================================================
+                PROTÓTIPOS DE FUNÇÕES
+===========================================================
+*/
+
+/*** Funções de Setup ***/
+
+// Cria um novo nó da árvore B+
+BPlusNode* createNode(int isLeaf);
+
+// Cria uma nova árvore B+
 BPlusTree* createTree(int order);
+
+/*** Funções de Inserção ***/
+
+// Insere uma chave na árvore B+
 void insertKey(BPlusTree* tree, int key);
-void deleteKey(BPlusTree* tree, int key);
+
+// Divide um nó folha que transbordou
+void splitLeaf(BPlusTree* tree, BPlusNode* leaf);
+
+// Insere uma chave em um nó interno
+void insertInternal(BPlusTree* tree, BPlusNode* parent, int key, BPlusNode* rightChild);
+
+// Divide um nó interno que transbordou
+void splitInternal(BPlusTree* tree, BPlusNode* node);
+
+/*** Funções de Busca ***/
+
+// Busca uma chave na árvore B+
+BPlusNode* searchKey(BPlusTree* tree, int key);
+
+/*** Funções de Impressão e Debug ***/
+
+// Imprime as chaves dos filhos de um nó (para depuração)
+void printChildrenKeys(BPlusNode* node);
+
+// Imprime a árvore B+
 void printTree(BPlusTree* tree);
 
-// Funções auxiliares
-BPlusNode* createNode(int isLeaf);
-BPlusNode* searchKey(BPlusTree* tree, int key);
-void splitLeaf(BPlusTree* tree, BPlusNode* leaf);
-void splitInternal(BPlusTree* tree, BPlusNode* node);
-void insertInternal(BPlusTree* tree, BPlusNode* parent, int key, BPlusNode* rightChild);
-void handleUnderflow(BPlusTree* tree, BPlusNode* node);
+// Função auxiliar para imprimir os nós da árvore
 void printNode(BPlusNode* node, int level);
-void redistributeFromLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex);
-void redistributeFromRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
-void mergeWithLeft(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* leftSibling, int nodeIndex);
-void mergeWithRight(BPlusTree* tree, BPlusNode* parent, BPlusNode* node, BPlusNode* rightSibling, int nodeIndex);
-void deleteFromNode(BPlusTree* tree, BPlusNode* node, int key);
-void repairAfterDelete(BPlusTree* tree, BPlusNode* node);
-void stealFromLeft(BPlusTree* tree, BPlusNode* node, int parentIndex);
-void stealFromRight(BPlusTree* tree, BPlusNode* node, int parentIndex);
-void mergeWithSibling(BPlusTree* tree, BPlusNode* left, BPlusNode* right, int parentIndex);
 
-
-//teste
+// Imprime os nós folhas da árvore (apenas para visualização)
 void printLeafNodes(BPlusTree* tree);
 
-// Declarações das Funções
+// Função para depurar a árvore (impressão detalhada)
+void debugTree(BPlusNode* node, int level);
 
-// Encontra o nó e índice da chave na árvore
-BPlusNode* achaElemento(BPlusNode* noAtual, int* indice, int chave);
+/*** Funções de Exclusão ***/
 
-// Verifica o caso específico da remoção
-int verificaCaso(BPlusNode* noAtual);
+// Encontra o índice de uma chave em um nó
+int findKeyIndex(BPlusNode* node, int key);
 
-// Remove uma chave do nó e ajusta a árvore, se necessário
-void remover(BPlusNode* noAtual, int chave);
+// Remove uma chave de um nó
+void removeKeyFromNode(BPlusNode* node, int key);
 
-// Ajusta a árvore após a remoção para manter suas propriedades
-void arrumarArvore(BPlusNode* noAtual);
+// Encontra o nó folha que deve conter a chave
+BPlusNode* findLeafNode(BPlusTree* tree, int key);
 
-// Empresta uma chave do irmão à esquerda
-void emprestaEsquerda(BPlusNode* noAtual);
+// Verifica se um nó tem o número mínimo de chaves
+int nodeHasMinimumKeys(BPlusNode* node);
 
-// Empresta uma chave do irmão à direita
-void emprestaDireita(BPlusNode* noAtual);
+// Obtém um nó irmão para redistribuição ou fusão
+BPlusNode* getSibling(BPlusNode* node, int* isLeftSibling);
 
-// Realiza o merge com o irmão à esquerda
-void mergeEsquerda(BPlusNode* noAtual);
+// Verifica se o irmão tem chaves extras para redistribuição
+int siblingHasExtraKeys(BPlusNode* sibling);
 
-// Realiza o merge com o irmão à direita
-void mergeDireita(BPlusNode* noAtual);
+// Redistribui chaves entre o nó e seu irmão
+void redistributeKeys(BPlusNode* node, BPlusNode* sibling, BPlusNode* parent, int isLeftSibling, int idxInParent);
+
+// Mescla dois nós e ajusta o pai
+void mergeNodes(BPlusNode* node, BPlusNode* sibling, BPlusNode* parent, int isLeftSibling, int idxInParent);
+
+// Trata o underflow em um nó após a exclusão
+void handleUnderflow(BPlusNode* node, BPlusTree* tree);
+
+// Atualiza os nós internos após a exclusão de uma chave
+void updateInternalKeysAfterDeletion(BPlusNode* node, int oldKey);
+
+// Exclui uma chave da árvore B+
+void deleteKey(BPlusTree* tree, int key);
 
 #endif // BPLUS_H
